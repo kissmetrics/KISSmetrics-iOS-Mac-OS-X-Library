@@ -691,10 +691,14 @@ static KISSMetricsAPI *sharedAPI = nil;
 #if TARGET_OS_MAC
 + (NSString *)macVersionNumber
 {
+    OSErr err;
     SInt32 major, minor, bugfix;
-    Gestalt(gestaltSystemVersionMajor, &major);
-    Gestalt(gestaltSystemVersionMinor, &minor);
-    Gestalt(gestaltSystemVersionBugFix, &bugfix);
+    err = Gestalt(gestaltSystemVersionMajor, &major);
+    if (err != noErr) return nil;
+    err = Gestalt(gestaltSystemVersionMinor, &minor);
+    if (err != noErr) return nil;
+    err =Gestalt(gestaltSystemVersionBugFix, &bugfix);
+    if (err != noErr) return nil;
     
     return [NSString stringWithFormat:@"%d.%d.%d", major, minor, bugfix];
 }
