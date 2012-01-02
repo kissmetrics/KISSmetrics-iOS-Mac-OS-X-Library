@@ -22,7 +22,8 @@
 #define PROP_PATH @"/s"
 #define ALIAS_PATH @"/a"
 #define RETRY_INTERVAL 5
-
+#define PROPS_KEY @"DeviceProperties"
+#define MAC_SYSTEM_NAME @"Mac OS X"
 
 #define FILE_PATH [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"KISSMetrics.actions"]
 
@@ -32,7 +33,6 @@
 
 
 static KISSMetricsAPI *sharedAPI = nil;
-
 
 
 @interface KISSMetricsAPI() 
@@ -79,7 +79,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     @synchronized(self)
     {
         if (sharedAPI == nil)
-		{
+        {
             sharedAPI = [[KISSMetricsAPI alloc] init];
             sharedAPI.key = apiKey;
             sharedAPI.lastIdentity = [NSKeyedUnarchiver unarchiveObjectWithFile:IDENTITY_PATH];
@@ -98,31 +98,39 @@ static KISSMetricsAPI *sharedAPI = nil;
             
             NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
 //If iOS > 4.0, then we need to listen for the didEnterForeground notification so we can start sending after a suspend.
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000		
-			if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) 
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000        
+            if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) 
             {
-				if (&UIApplicationWillEnterForegroundNotification) {
+                if (&UIApplicationWillEnterForegroundNotification) {
                     [notificationCenter addObserver:sharedAPI 
                                            selector:@selector(applicationWillEnterForeground:) 
                                                name:UIApplicationWillEnterForegroundNotification 
                                              object:nil];
-				}
-			}
+                }
+            }
 #endif
             //Always listen to will terminate.
-			[notificationCenter addObserver:self 
-								   selector:@selector(applicationWillTerminate:) 
-									   name:UIApplicationWillTerminateNotification 
-									 object:nil];
             
+#if TARGET_OS_MAC
+            [notificationCenter addObserver:self 
+                                   selector:@selector(applicationWillTerminate:) 
+                                       name:NSApplicationWillTerminateNotification 
+                                     object:nil];
+#elif TARGET_OS_IPHONE
+            [notificationCenter addObserver:self 
+                                   selector:@selector(applicationWillTerminate:) 
+                                       name:UIApplicationWillTerminateNotification 
+                                     object:nil];
+#endif
             
             //Check if we've sent or updated the basic properties for this device. 
             BOOL shouldSendProps = YES;
-            sharedAPI.propsToSend = [[NSUserDefaults standardUserDefaults] objectForKey:@"iOSProps"];
+            sharedAPI.propsToSend = [[NSUserDefaults standardUserDefaults] objectForKey:PROPS_KEY];
             if (sharedAPI.propsToSend != nil) 
             {
                 shouldSendProps = NO;
                 
+#if TARGET_OS_IPHONE
                 if(![[[UIDevice currentDevice] systemName] isEqualToString:[sharedAPI.propsToSend objectForKey:@"systemName"]])
                 {
                     shouldSendProps = YES; 
@@ -131,13 +139,29 @@ static KISSMetricsAPI *sharedAPI = nil;
                 {
                     shouldSendProps = YES; 
                 }
+#elif TARGET_OS_MAC
+                if(![MAC_SYSTEM_NAME isEqualToString:[sharedAPI.propsToSend objectForKey:@"systemName"]])
+                {
+                    shouldSendProps = YES; 
+                }
+                else if(![[self macVersionNumber] isEqualToString:[sharedAPI.propsToSend objectForKey:@"systemVersion"]])
+                {
+                    shouldSendProps = YES; 
+                }
+#endif
+                
             }
             
             if(shouldSendProps)
             {
-                sharedAPI.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:[[UIDevice currentDevice] systemName], @"systemName", [[UIDevice currentDevice] systemVersion], @"systemVersion", nil];
                 
-                [[NSUserDefaults standardUserDefaults] setObject:sharedAPI.propsToSend forKey:@"iOSProps"];
+#if TARGET_OS_IPHONE
+                sharedAPI.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:[[UIDevice currentDevice] systemName], @"systemName", [[UIDevice currentDevice] systemVersion], @"systemVersion", nil];
+#elif TARGET_OS_MAC
+                sharedAPI.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:MAC_SYSTEM_NAME, @"systemName", [self macVersionNumber], @"systemVersion", nil];
+#endif        
+                
+                [[NSUserDefaults standardUserDefaults] setObject:sharedAPI.propsToSend forKey:PROPS_KEY];
                 [[NSUserDefaults standardUserDefaults] synchronize];
                 
             }
@@ -161,7 +185,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     @synchronized(self)
     {
         if (sharedAPI == nil)
-		{
+        {
             InfoLog(@"KISSMetricsAPI: WARNING - Returning nil object in sharedAPI as sharedAPIWithKey: has not been called.");
         }
     }
@@ -172,7 +196,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 {
     @synchronized(self) {
         if (sharedAPI == nil) 
-		{
+        {
             sharedAPI = [super allocWithZone:zone];
             return sharedAPI;  // assignment and return on first allocation
         }
@@ -290,8 +314,10 @@ static KISSMetricsAPI *sharedAPI = nil;
         
         nextAPICall = [self.sendQueue objectAtIndex:0];
 
+#if TARGET_OS_IPHONE
         //Networking code.
         [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:YES];
+#endif
         
         NSURL *url = [NSURL URLWithString:nextAPICall];
         NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url];
@@ -307,7 +333,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 #pragma mark NSURLConnection Callbacks
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSHTTPURLResponse *)response 
 {
-	if ([response statusCode] == 200 || [response statusCode] == 304) 
+    if ([response statusCode] == 200 || [response statusCode] == 304) 
     {
         
         //Got HTTP 200 or HTTP 304, which means we can remove the top most API call from the queue.
@@ -316,11 +342,11 @@ static KISSMetricsAPI *sharedAPI = nil;
             [self.sendQueue removeObjectAtIndex:0];
             [self archiveData];
         }
-	} 
+    } 
     else 
     {
         InfoLog(@"KISSMetricsAPI: INFO - Failure %@", [NSHTTPURLResponse localizedStringForStatusCode:[response statusCode]]);
-	}
+    }
 }
 
 
@@ -329,9 +355,9 @@ static KISSMetricsAPI *sharedAPI = nil;
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error 
 {
 
-    
+#if TARGET_OS_IPHONE
     [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
-    
+#endif
     
     
     if(error.code == NSURLErrorBadURL ||
@@ -384,7 +410,10 @@ static KISSMetricsAPI *sharedAPI = nil;
     {
         self.existingConnection = nil;
     }
-	[[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
+    
+#if TARGET_OS_IPHONE
+    [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
+#endif
     
     //Now can try the next one, as this one was successful (might not be one, but that's okay).
     [self send];
@@ -478,7 +507,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         NSString *escapedKey = [self urlEncode:stringKey];
         if([escapedKey length] > 255)
         {
-            InfoLog(@"KISSMetricsAPI: WARNING - property key cannot longer than 255 characters. When URL escaped, your key is %i characters long (the submitted value is %@, the URL escaped value is %@). Dropping property.", [escapedKey length], stringKey, escapedKey);
+            InfoLog(@"KISSMetricsAPI: WARNING - property key cannot longer than 255 characters. When URL escaped, your key is %lu characters long (the submitted value is %@, the URL escaped value is %@). Dropping property.", [escapedKey length], stringKey, escapedKey);
             continue;
         }
         
@@ -659,7 +688,15 @@ static KISSMetricsAPI *sharedAPI = nil;
 }
 
 
-
++ (NSString *)macVersionNumber
+{
+    SInt32 major, minor, bugfix;
+    Gestalt(gestaltSystemVersionMajor, &major);
+    Gestalt(gestaltSystemVersionMinor, &minor);
+    Gestalt(gestaltSystemVersionBugFix, &bugfix);
+    
+    return [NSString stringWithFormat:@"%d.%d.%d", major, minor, bugfix];
+}
 
 
 @end
