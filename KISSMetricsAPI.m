@@ -688,6 +688,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 }
 
 
+#if TARGET_OS_MAC
 + (NSString *)macVersionNumber
 {
     SInt32 major, minor, bugfix;
@@ -697,6 +698,6 @@ static KISSMetricsAPI *sharedAPI = nil;
     
     return [NSString stringWithFormat:@"%d.%d.%d", major, minor, bugfix];
 }
-
+#endif
 
 @end
