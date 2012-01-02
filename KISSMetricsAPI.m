@@ -97,7 +97,7 @@ static KISSMetricsAPI *sharedAPI = nil;
             
             
             NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-//If iOS > 4.0, then we need to listen for the didEnterForeground notification so we can start sending after a suspend.
+            //If iOS > 4.0, then we need to listen for the didEnterForeground notification so we can start sending after a suspend.
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000        
             if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) 
             {
@@ -111,12 +111,12 @@ static KISSMetricsAPI *sharedAPI = nil;
 #endif
             //Always listen to will terminate.
             
-#if TARGET_OS_MAC
+#if !TARGET_OS_IPHONE
             [notificationCenter addObserver:self 
                                    selector:@selector(applicationWillTerminate:) 
                                        name:NSApplicationWillTerminateNotification 
                                      object:nil];
-#elif TARGET_OS_IPHONE
+#else
             [notificationCenter addObserver:self 
                                    selector:@selector(applicationWillTerminate:) 
                                        name:UIApplicationWillTerminateNotification 
@@ -139,7 +139,7 @@ static KISSMetricsAPI *sharedAPI = nil;
                 {
                     shouldSendProps = YES; 
                 }
-#elif TARGET_OS_MAC
+#else
                 if(![MAC_SYSTEM_NAME isEqualToString:[sharedAPI.propsToSend objectForKey:@"systemName"]])
                 {
                     shouldSendProps = YES; 
@@ -157,7 +157,7 @@ static KISSMetricsAPI *sharedAPI = nil;
                 
 #if TARGET_OS_IPHONE
                 sharedAPI.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:[[UIDevice currentDevice] systemName], @"systemName", [[UIDevice currentDevice] systemVersion], @"systemVersion", nil];
-#elif TARGET_OS_MAC
+#else
                 sharedAPI.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:MAC_SYSTEM_NAME, @"systemName", [self macVersionNumber], @"systemVersion", nil];
 #endif        
                 
@@ -173,8 +173,8 @@ static KISSMetricsAPI *sharedAPI = nil;
             
             
             [sharedAPI applicationWillEnterForeground:nil];
-
-
+            
+            
         }
     }
     return sharedAPI;
@@ -287,7 +287,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 - (void) send
 {
     
-
+    
     @synchronized(self)
     {
         //If timer is != nil, then we cancel it.
@@ -313,7 +313,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         }
         
         nextAPICall = [self.sendQueue objectAtIndex:0];
-
+        
 #if TARGET_OS_IPHONE
         //Networking code.
         [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:YES];
@@ -326,7 +326,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         [self.existingConnection start];
         [request release];
     }
-
+    
 }
 
 #pragma mark -
@@ -354,7 +354,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error 
 {
-
+    
 #if TARGET_OS_IPHONE
     [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
 #endif
@@ -372,13 +372,13 @@ static KISSMetricsAPI *sharedAPI = nil;
             [self archiveData];
         }
     }
-   
+    
     
     
     @synchronized(self)
     {
         self.existingConnection = nil;
-    
+        
         //Effectively cycle through the URLs so as to not have one messed up URL block all others.
         if ([self.sendQueue count] > 1)
         {
@@ -394,13 +394,13 @@ static KISSMetricsAPI *sharedAPI = nil;
         if(self.timer == nil)//Only if there's no other timer do we schedule a retry.
         {
             self.timer = [NSTimer scheduledTimerWithTimeInterval:RETRY_INTERVAL 
-                                             target:self 
-                                           selector:@selector(send) 
-                                           userInfo:nil 
-                                            repeats:NO];
+                                                          target:self 
+                                                        selector:@selector(send) 
+                                                        userInfo:nil 
+                                                         repeats:NO];
         }
     }
-
+    
     
 }
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection 
@@ -567,7 +567,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         }
     }
     
-
+    
     @synchronized(self)
     {
         //Queue up call.
@@ -605,7 +605,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     NSString *theURL = [NSString stringWithFormat:@"%@%@?_k=%@&_p=%@&_d=1&_t=%i&", BASE_URL, PROP_PATH, self.key, escapedIdentity,actualTimeOfevent];
     
     theURL = [NSString stringWithFormat:@"%@%@", theURL,additionalURL];
-
+    
     
     @synchronized(self)
     {
@@ -628,16 +628,16 @@ static KISSMetricsAPI *sharedAPI = nil;
         InfoLog(@"KISSMetricsAPI: WARNING - attempted to use nil or empty identity. Ignoring.");
         return;
     }
-
+    
     
     NSString *escapedOldIdentity = [self urlEncode:self.lastIdentity];
     NSString *escapedNewIdentity = [self urlEncode:identity];
     
     
     NSString *theURL = [NSString stringWithFormat:@"%@%@?_k=%@&_p=%@&_n=%@", BASE_URL, ALIAS_PATH, self.key, escapedOldIdentity,escapedNewIdentity];
-      
     
-      
+    
+    
     
     @synchronized(self)
     {
@@ -649,14 +649,14 @@ static KISSMetricsAPI *sharedAPI = nil;
         {
             InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive new identity!!!");
         }
-
+        
         [self.sendQueue addObject:theURL];
         //Persist the new queue
         [self archiveData];
     }
     //Push it out right not if possible.
     [self send];
-
+    
     
     
 }
@@ -684,11 +684,11 @@ static KISSMetricsAPI *sharedAPI = nil;
     }
     //Push it out right not if possible.
     [self send];
-
+    
 }
 
 
-#if TARGET_OS_MAC
+#if !TARGET_OS_IPHONE
 + (NSString *)macVersionNumber
 {
     OSErr err;
