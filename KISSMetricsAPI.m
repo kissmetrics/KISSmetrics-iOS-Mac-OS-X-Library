@@ -44,6 +44,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 @property (nonatomic, retain) NSString *lastIdentity;
 @property (nonatomic, retain) NSDictionary *propsToSend;
 
+-(void) initializeAPIWithKey:(NSString *)apiKey;
 -(void) send;
 
 //Saving/unpersisting data
@@ -78,104 +79,11 @@ static KISSMetricsAPI *sharedAPI = nil;
 {
     @synchronized(self)
     {
-        if (sharedAPI == nil)
-        {
+        if (sharedAPI == nil) {
             sharedAPI = [[KISSMetricsAPI alloc] init];
-            sharedAPI.key = apiKey;
-            sharedAPI.lastIdentity = [NSKeyedUnarchiver unarchiveObjectWithFile:IDENTITY_PATH];
-            if(!sharedAPI.lastIdentity) //If there's no identity, generate a UUID as a temp.
-            {
-                CFUUIDRef theUUID = CFUUIDCreate(NULL);
-                CFStringRef string = CFUUIDCreateString(NULL, theUUID);
-                CFRelease(theUUID);
-                sharedAPI.lastIdentity = [(NSString *)string autorelease];
-                if (![NSKeyedArchiver archiveRootObject:sharedAPI.lastIdentity toFile:IDENTITY_PATH]) 
-                {
-                    InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive identity!!!");
-                }
-            }
-            
-            
-            NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-            //If iOS > 4.0, then we need to listen for the didEnterForeground notification so we can start sending after a suspend.
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000        
-            if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) 
-            {
-                if (&UIApplicationWillEnterForegroundNotification) {
-                    [notificationCenter addObserver:sharedAPI 
-                                           selector:@selector(applicationWillEnterForeground:) 
-                                               name:UIApplicationWillEnterForegroundNotification 
-                                             object:nil];
-                }
-            }
-#endif
-            //Always listen to will terminate.
-            
-#if !TARGET_OS_IPHONE
-            [notificationCenter addObserver:self 
-                                   selector:@selector(applicationWillTerminate:) 
-                                       name:NSApplicationWillTerminateNotification 
-                                     object:nil];
-#else
-            [notificationCenter addObserver:self 
-                                   selector:@selector(applicationWillTerminate:) 
-                                       name:UIApplicationWillTerminateNotification 
-                                     object:nil];
-#endif
-            
-            //Check if we've sent or updated the basic properties for this device. 
-            BOOL shouldSendProps = YES;
-            sharedAPI.propsToSend = [[NSUserDefaults standardUserDefaults] objectForKey:PROPS_KEY];
-            if (sharedAPI.propsToSend != nil) 
-            {
-                shouldSendProps = NO;
-                
-#if TARGET_OS_IPHONE
-                if(![[[UIDevice currentDevice] systemName] isEqualToString:[sharedAPI.propsToSend objectForKey:@"systemName"]])
-                {
-                    shouldSendProps = YES; 
-                }
-                else if(![[[UIDevice currentDevice] systemVersion] isEqualToString:[sharedAPI.propsToSend objectForKey:@"systemVersion"]])
-                {
-                    shouldSendProps = YES; 
-                }
-#else
-                if(![MAC_SYSTEM_NAME isEqualToString:[sharedAPI.propsToSend objectForKey:@"systemName"]])
-                {
-                    shouldSendProps = YES; 
-                }
-                else if(![[self macVersionNumber] isEqualToString:[sharedAPI.propsToSend objectForKey:@"systemVersion"]])
-                {
-                    shouldSendProps = YES; 
-                }
-#endif
-                
-            }
-            
-            if(shouldSendProps)
-            {
-                
-#if TARGET_OS_IPHONE
-                sharedAPI.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:[[UIDevice currentDevice] systemName], @"systemName", [[UIDevice currentDevice] systemVersion], @"systemVersion", nil];
-#else
-                sharedAPI.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:MAC_SYSTEM_NAME, @"systemName", [self macVersionNumber], @"systemVersion", nil];
-#endif        
-                
-                [[NSUserDefaults standardUserDefaults] setObject:sharedAPI.propsToSend forKey:PROPS_KEY];
-                [[NSUserDefaults standardUserDefaults] synchronize];
-                
-            }
-            else
-            {
-                sharedAPI.propsToSend = nil; 
-            }
-            //Note: can't send yet, will do so when entering foreground.
-            
-            
-            [sharedAPI applicationWillEnterForeground:nil];
-            
-            
+            [sharedAPI initializeAPIWithKey:apiKey];
         }
+            
     }
     return sharedAPI;
 }
@@ -190,6 +98,102 @@ static KISSMetricsAPI *sharedAPI = nil;
         }
     }
     return sharedAPI;
+}
+
+- (void) initializeAPIWithKey:(NSString *)apiKey
+{
+    self.key = apiKey;
+    self.lastIdentity = [NSKeyedUnarchiver unarchiveObjectWithFile:IDENTITY_PATH];
+    if(!self.lastIdentity) //If there's no identity, generate a UUID as a temp.
+    {
+        CFUUIDRef theUUID = CFUUIDCreate(NULL);
+        CFStringRef string = CFUUIDCreateString(NULL, theUUID);
+        CFRelease(theUUID);
+        self.lastIdentity = [(NSString *)string autorelease];
+        if (![NSKeyedArchiver archiveRootObject:self.lastIdentity toFile:IDENTITY_PATH]) 
+        {
+            InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive identity!!!");
+        }
+    }
+    
+    
+    NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
+    //If iOS > 4.0, then we need to listen for the didEnterForeground notification so we can start sending after a suspend.
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000        
+    if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) 
+    {
+        if (&UIApplicationWillEnterForegroundNotification) {
+            [notificationCenter addObserver:self 
+                                   selector:@selector(applicationWillEnterForeground:) 
+                                       name:UIApplicationWillEnterForegroundNotification 
+                                     object:nil];
+        }
+    }
+#endif
+    //Always listen to will terminate.
+    
+#if !TARGET_OS_IPHONE
+    [notificationCenter addObserver:self 
+                           selector:@selector(applicationWillTerminate:) 
+                               name:NSApplicationWillTerminateNotification 
+                             object:nil];
+#else
+    [notificationCenter addObserver:self 
+                           selector:@selector(applicationWillTerminate:) 
+                               name:UIApplicationWillTerminateNotification 
+                             object:nil];
+#endif
+    
+    //Check if we've sent or updated the basic properties for this device. 
+    BOOL shouldSendProps = YES;
+    self.propsToSend = [[NSUserDefaults standardUserDefaults] objectForKey:PROPS_KEY];
+    if (self.propsToSend != nil) 
+    {
+        shouldSendProps = NO;
+        
+#if TARGET_OS_IPHONE
+        if(![[[UIDevice currentDevice] systemName] isEqualToString:[self.propsToSend objectForKey:@"systemName"]])
+        {
+            shouldSendProps = YES; 
+        }
+        else if(![[[UIDevice currentDevice] systemVersion] isEqualToString:[self.propsToSend objectForKey:@"systemVersion"]])
+        {
+            shouldSendProps = YES; 
+        }
+#else
+        if(![MAC_SYSTEM_NAME isEqualToString:[self.propsToSend objectForKey:@"systemName"]])
+        {
+            shouldSendProps = YES; 
+        }
+        else if(![[self macVersionNumber] isEqualToString:[self.propsToSend objectForKey:@"systemVersion"]])
+        {
+            shouldSendProps = YES; 
+        }
+#endif
+        
+    }
+    
+    if(shouldSendProps)
+    {
+        
+#if TARGET_OS_IPHONE
+        self.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:[[UIDevice currentDevice] systemName], @"systemName", [[UIDevice currentDevice] systemVersion], @"systemVersion", nil];
+#else
+        self.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:MAC_SYSTEM_NAME, @"systemName", [self macVersionNumber], @"systemVersion", nil];
+#endif        
+        
+        [[NSUserDefaults standardUserDefaults] setObject:self.propsToSend forKey:PROPS_KEY];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        
+    }
+    else
+    {
+        self.propsToSend = nil; 
+    }
+    //Note: can't send yet, will do so when entering foreground.
+    
+    
+    [self applicationWillEnterForeground:nil];
 }
 
 + (id)allocWithZone:(NSZone *)zone 
