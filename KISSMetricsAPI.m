@@ -329,6 +329,16 @@ static KISSMetricsAPI *sharedAPI = nil;
         self.existingConnection = [NSURLConnection connectionWithRequest:request delegate:self];
         [self.existingConnection start];
         [request release];
+        
+        // If called from a background thread
+        if(![NSThread isMainThread]){
+            
+            // Keep the thread alive until the request completes or fails
+            while(self.existingConnection) {
+                [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
+            }
+        }
+        
     }
     
 }
