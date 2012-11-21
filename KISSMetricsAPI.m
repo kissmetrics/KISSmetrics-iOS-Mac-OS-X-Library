@@ -41,7 +41,6 @@ static KISSMetricsAPI *sharedAPI = nil;
 @property (nonatomic, retain) NSTimer *timer;
 @property (nonatomic, retain) NSURLConnection *existingConnection;
 @property (nonatomic, retain) NSString *key;
-@property (nonatomic, retain) NSString *lastIdentity;
 @property (nonatomic, retain) NSDictionary *propsToSend;
 
 -(void) initializeAPIWithKey:(NSString *)apiKey;
@@ -103,7 +102,9 @@ static KISSMetricsAPI *sharedAPI = nil;
 - (void) initializeAPIWithKey:(NSString *)apiKey
 {
     self.key = apiKey;
-    self.lastIdentity = [NSKeyedUnarchiver unarchiveObjectWithFile:IDENTITY_PATH];
+	if (!self.lastIdentity) {
+		self.lastIdentity = [NSKeyedUnarchiver unarchiveObjectWithFile:IDENTITY_PATH];
+	}
     if(!self.lastIdentity) //If there's no identity, generate a UUID as a temp.
     {
         CFUUIDRef theUUID = CFUUIDCreate(NULL);
