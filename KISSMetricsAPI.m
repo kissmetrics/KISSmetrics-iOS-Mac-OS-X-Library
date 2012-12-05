@@ -106,14 +106,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     self.lastIdentity = [NSKeyedUnarchiver unarchiveObjectWithFile:IDENTITY_PATH];
     if(!self.lastIdentity) //If there's no identity, generate a UUID as a temp.
     {
-        CFUUIDRef theUUID = CFUUIDCreate(NULL);
-        CFStringRef string = CFUUIDCreateString(NULL, theUUID);
-        CFRelease(theUUID);
-        self.lastIdentity = [(NSString *)string autorelease];
-        if (![NSKeyedArchiver archiveRootObject:self.lastIdentity toFile:IDENTITY_PATH]) 
-        {
-            InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive identity!!!");
-        }
+        [self clearIdentity];
     }
     
     
@@ -672,7 +665,20 @@ static KISSMetricsAPI *sharedAPI = nil;
     [self send];
     
     
-    
+
+}
+
+
+- (void)clearIdentity
+{
+    CFUUIDRef theUUID = CFUUIDCreate(NULL);
+    CFStringRef string = CFUUIDCreateString(NULL, theUUID);
+    CFRelease(theUUID);
+    self.lastIdentity = [(NSString *)string autorelease];
+    if (![NSKeyedArchiver archiveRootObject:self.lastIdentity toFile:IDENTITY_PATH])
+    {
+        InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive identity!!!");
+    }
 }
 
 

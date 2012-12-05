@@ -115,6 +115,20 @@
  */
 - (void)identify:(NSString *)identity;
 
+
+/**
+ * clearIdentity:
+ *
+ * Clears the last set identity.
+ *
+ *
+ * Discussion:
+ * You can clear the last set identity after a user logs out to prevent the activity of another user
+ * from being attributed to the last logged in identity.
+ */
+- (void)clearIdentity;
+
+
 /**
  * alias:
  * 
