@@ -206,23 +206,6 @@ static KISSMetricsAPI *sharedAPI = nil;
     return self;
 }
 
-- (id)retain {
-    return self;
-}
-
-- (NSUInteger)retainCount {
-    return UINT_MAX;  // denotes an object that cannot be released
-}
-
-- (oneway void)release {
-    //do nothing
-}
-
-- (id)autorelease {
-    return self;
-}
-
-
 - (id)init
 {
     self = [super init];
@@ -321,8 +304,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         
         self.existingConnection = [NSURLConnection connectionWithRequest:request delegate:self];
         [self.existingConnection start];
-        [request release];
-        
+
         // If called from a background thread
         if(![NSThread isMainThread]){
             
@@ -390,10 +372,8 @@ static KISSMetricsAPI *sharedAPI = nil;
         if ([self.sendQueue count] > 1)
         {
             NSString *failedURL = [self.sendQueue objectAtIndex:0];
-            [failedURL retain];
             [self.sendQueue removeObjectAtIndex:0];
             [self.sendQueue addObject:failedURL];
-            [failedURL release];
         }
         [self archiveData];
         
@@ -514,7 +494,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         NSString *escapedKey = [self urlEncode:stringKey];
         if([escapedKey length] > 255)
         {
-            InfoLog(@"KISSMetricsAPI: WARNING - property key cannot longer than 255 characters. When URL escaped, your key is %lu characters long (the submitted value is %@, the URL escaped value is %@). Dropping property.", [escapedKey length], stringKey, escapedKey);
+            InfoLog(@"KISSMetricsAPI: WARNING - property key cannot longer than 255 characters. When URL escaped, your key is %u characters long (the submitted value is %@, the URL escaped value is %@). Dropping property.", [escapedKey length], stringKey, escapedKey);
             continue;
         }
         
@@ -533,8 +513,8 @@ static KISSMetricsAPI *sharedAPI = nil;
 //the NSString method doesn't work right, so..
 - (NSString *)urlEncode:(NSString *)prior
 {
-    NSString * after = (NSString *)CFURLCreateStringByAddingPercentEscapes( NULL,(CFStringRef)prior, NULL,(CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8 );
-    return [after autorelease];
+    NSString * after = (__bridge NSString *)CFURLCreateStringByAddingPercentEscapes( NULL,(CFStringRef)prior, NULL,(CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8 );
+    return after;
     
 }
 
@@ -674,7 +654,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     CFUUIDRef theUUID = CFUUIDCreate(NULL);
     CFStringRef string = CFUUIDCreateString(NULL, theUUID);
     CFRelease(theUUID);
-    self.lastIdentity = [(NSString *)string autorelease];
+    self.lastIdentity = (__bridge NSString *)string;
     if (![NSKeyedArchiver archiveRootObject:self.lastIdentity toFile:IDENTITY_PATH])
     {
         InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive identity!!!");
