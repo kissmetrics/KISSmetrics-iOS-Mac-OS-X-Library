@@ -513,9 +513,8 @@ static KISSMetricsAPI *sharedAPI = nil;
 //the NSString method doesn't work right, so..
 - (NSString *)urlEncode:(NSString *)prior
 {
-    NSString * after = (__bridge NSString *)CFURLCreateStringByAddingPercentEscapes( NULL,(CFStringRef)prior, NULL,(CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8 );
+    NSString *after = (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(NULL,(CFStringRef)prior, NULL,(CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8);
     return after;
-    
 }
 
 
@@ -652,9 +651,9 @@ static KISSMetricsAPI *sharedAPI = nil;
 - (void)clearIdentity
 {
     CFUUIDRef theUUID = CFUUIDCreate(NULL);
-    CFStringRef string = CFUUIDCreateString(NULL, theUUID);
+    NSString *string = (__bridge_transfer NSString *)CFUUIDCreateString(NULL, theUUID);
     CFRelease(theUUID);
-    self.lastIdentity = (__bridge NSString *)string;
+    self.lastIdentity = string;
     if (![NSKeyedArchiver archiveRootObject:self.lastIdentity toFile:IDENTITY_PATH])
     {
         InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive identity!!!");
