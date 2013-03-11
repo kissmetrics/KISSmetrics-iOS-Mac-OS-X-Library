@@ -147,7 +147,8 @@
 - (void)alias:(NSString *)firstIdentity withIdentity:(NSString *)secondIdentity;
 
 
-#if !TARGET_OS_IPHONE
+//#if !TARGET_OS_IPHONE
+
 /**
  * macVersionNumber
  * 
@@ -158,7 +159,7 @@
  * You can return back the current version of Mac OS X that you're running.  This will return back a 
  * formatted NSString.  This is included in the logging props and is only defined for Mac OS X.
  */
-+ (NSString *)macVersionNumber;
-#endif
+- (NSString *)macVersionNumber;
+//#endif
 
 @end
