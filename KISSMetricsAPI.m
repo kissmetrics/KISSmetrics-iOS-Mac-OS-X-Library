@@ -494,7 +494,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         NSString *escapedKey = [self urlEncode:stringKey];
         if([escapedKey length] > 255)
         {
-            InfoLog(@"KISSMetricsAPI: WARNING - property key cannot longer than 255 characters. When URL escaped, your key is %u characters long (the submitted value is %@, the URL escaped value is %@). Dropping property.", [escapedKey length], stringKey, escapedKey);
+            InfoLog(@"KISSMetricsAPI: WARNING - property key cannot longer than 255 characters. When URL escaped, your key is %u characters long (the submitted value is %@, the URL escaped value is %@). Dropping property.", (unsigned int)[escapedKey length], stringKey, escapedKey);
             continue;
         }
         
@@ -513,7 +513,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 //the NSString method doesn't work right, so..
 - (NSString *)urlEncode:(NSString *)prior
 {
-    NSString *after = (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(NULL,(CFStringRef)prior, NULL,(CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8);
+    NSString *after = (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(NULL,(__bridge CFStringRef)prior, NULL,(__bridge CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8);
     return after;
 }
 
@@ -688,7 +688,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 
 
 #if !TARGET_OS_IPHONE
-+ (NSString *)macVersionNumber
+- (NSString *)macVersionNumber
 {
     OSErr err;
     SInt32 major, minor, bugfix;
