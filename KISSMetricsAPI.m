@@ -513,7 +513,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 //the NSString method doesn't work right, so..
 - (NSString *)urlEncode:(NSString *)prior
 {
-    NSString *after = (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(NULL,(__bridge CFStringRef)prior, NULL,(CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8);
+    NSString *after = (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(NULL,(__bridge CFStringRef)prior, NULL,(__bridge CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8);
     return after;
 }
 
