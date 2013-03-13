@@ -147,7 +147,7 @@
 - (void)alias:(NSString *)firstIdentity withIdentity:(NSString *)secondIdentity;
 
 
-//#if !TARGET_OS_IPHONE
+#if !TARGET_OS_IPHONE
 
 /**
  * macVersionNumber
@@ -160,6 +160,6 @@
  * formatted NSString.  This is included in the logging props and is only defined for Mac OS X.
  */
 - (NSString *)macVersionNumber;
-//#endif
+#endif
 
 @end
