@@ -158,7 +158,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         {
             shouldSendProps = YES; 
         }
-        else if(![[self macVersionNumber] isEqualToString:[self.propsToSend objectForKey:@"systemVersion"]])
+        else if(![[KISSMetricsAPI macVersionNumber] isEqualToString:[self.propsToSend objectForKey:@"systemVersion"]])
         {
             shouldSendProps = YES; 
         }
@@ -172,7 +172,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 #if TARGET_OS_IPHONE
         self.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:[[UIDevice currentDevice] systemName], @"systemName", [[UIDevice currentDevice] systemVersion], @"systemVersion", nil];
 #else
-        self.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:MAC_SYSTEM_NAME, @"systemName", [self macVersionNumber], @"systemVersion", nil];
+        self.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:MAC_SYSTEM_NAME, @"systemName", [KISSMetricsAPI macVersionNumber], @"systemVersion", nil];
 #endif        
         
         [[NSUserDefaults standardUserDefaults] setObject:self.propsToSend forKey:PROPS_KEY];
