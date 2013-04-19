@@ -43,6 +43,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 @property (nonatomic, retain) NSString *key;
 @property (nonatomic, retain) NSString *lastIdentity;
 @property (nonatomic, retain) NSDictionary *propsToSend;
+@property (nonatomic, readwrite) NSInteger failureStatus;
 
 -(void) initializeAPIWithKey:(NSString *)apiKey;
 -(void) send;
@@ -71,6 +72,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 @synthesize key;
 @synthesize lastIdentity;
 @synthesize propsToSend;
+@synthesize failureStatus;
 
 #pragma mark -
 #pragma mark Singleton methods
@@ -346,6 +348,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         //Got HTTP 200 or HTTP 304, which means we can remove the top most API call from the queue.
         @synchronized(self)
         {
+            self.failureStatus = 0;
             [self.sendQueue removeObjectAtIndex:0];
             [self archiveData];
         }
@@ -353,6 +356,11 @@ static KISSMetricsAPI *sharedAPI = nil;
     else 
     {
         InfoLog(@"KISSMetricsAPI: INFO - Failure %@", [NSHTTPURLResponse localizedStringForStatusCode:[response statusCode]]);
+        
+        @synchronized(self)
+        {
+            self.failureStatus = [response statusCode];
+        }
     }
 }
 
@@ -412,15 +420,28 @@ static KISSMetricsAPI *sharedAPI = nil;
 }
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection 
 {
-    
     @synchronized(self)
     {
         self.existingConnection = nil;
-    }
-    
 #if TARGET_OS_IPHONE
-    [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
+        [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
 #endif
+
+        if(self.failureStatus)
+        {
+            // Allow next send attempt after timer
+            if(self.timer == nil)//Only if there's no other timer do we schedule a retry.
+            {
+                self.timer = [NSTimer scheduledTimerWithTimeInterval:RETRY_INTERVAL
+                                                              target:self
+                                                            selector:@selector(send)
+                                                            userInfo:nil
+                                                             repeats:NO];
+            }
+            
+            return;
+        }
+    }
     
     //Now can try the next one, as this one was successful (might not be one, but that's okay).
     [self send];
