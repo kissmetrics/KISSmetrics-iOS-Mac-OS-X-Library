@@ -41,7 +41,6 @@ static KISSMetricsAPI *sharedAPI = nil;
 @property (nonatomic, retain) NSTimer *timer;
 @property (nonatomic, retain) NSURLConnection *existingConnection;
 @property (nonatomic, retain) NSString *key;
-@property (nonatomic, retain) NSString *lastIdentity;
 @property (nonatomic, retain) NSDictionary *propsToSend;
 @property (nonatomic, readwrite) NSInteger failureStatus;
 
@@ -656,7 +655,10 @@ static KISSMetricsAPI *sharedAPI = nil;
         InfoLog(@"KISSMetricsAPI: WARNING - attempted to use nil or empty identity. Ignoring.");
         return;
     }
-    
+  
+    if ([lastIdentity isEqualToString:identity])
+      return;
+  
     
     NSString *escapedOldIdentity = [self urlEncode:self.lastIdentity];
     NSString *escapedNewIdentity = [self urlEncode:identity];

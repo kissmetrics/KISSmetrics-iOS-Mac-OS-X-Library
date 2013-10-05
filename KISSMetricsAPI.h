@@ -16,6 +16,7 @@
 
 @interface KISSMetricsAPI : NSObject
 
+@property (nonatomic, retain) NSString *lastIdentity;
 
 /**
  * sharedAPIWithKey:
