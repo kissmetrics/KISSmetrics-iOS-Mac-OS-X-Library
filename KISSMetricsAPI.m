@@ -352,11 +352,13 @@ static KISSMetricsAPI *sharedAPI = nil;
             [self.sendQueue removeObjectAtIndex:0];
             [self archiveData];
         }
-    } 
-    else 
+    }
+    else
     {
         InfoLog(@"KISSMetricsAPI: INFO - Failure %@", [NSHTTPURLResponse localizedStringForStatusCode:[response statusCode]]);
-        
+
+        InfoLog(@"KISSMetricsAPI: Response:%ld for  Current Request:%@  Original Request:%@", (long)[response statusCode], connection.currentRequest.URL, connection.originalRequest.URL);
+
         @synchronized(self)
         {
             self.failureStatus = [response statusCode];
