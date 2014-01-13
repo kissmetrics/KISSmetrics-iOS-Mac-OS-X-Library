@@ -41,6 +41,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 @property (nonatomic, retain) NSTimer *timer;
 @property (nonatomic, retain) NSURLConnection *existingConnection;
 @property (nonatomic, retain) NSString *key;
+@property (nonatomic, retain) NSString *lastIdentity;
 @property (nonatomic, retain) NSDictionary *propsToSend;
 @property (nonatomic, readwrite) NSInteger failureStatus;
 
@@ -684,11 +685,15 @@ static KISSMetricsAPI *sharedAPI = nil;
         //Persist the new queue
         [self archiveData];
     }
-    //Push it out right not if possible.
+    
+    //Push it out right now if possible.
     [self send];
-    
-    
+}
 
+
+- (NSString *)identity
+{
+    return self.lastIdentity;
 }
 
 

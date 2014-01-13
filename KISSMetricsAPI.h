@@ -16,7 +16,6 @@
 
 @interface KISSMetricsAPI : NSObject
 
-@property (nonatomic, retain) NSString *lastIdentity;
 
 /**
  * sharedAPIWithKey:
@@ -115,6 +114,15 @@
  * sharedAPIWithKey: (see sharedAPIWithKey:  for more details).
  */
 - (void)identify:(NSString *)identity;
+
+
+/**
+ * identity
+ *
+ * Discussion:
+ * Returns the latest identity set through identify:
+ */
+- (NSString *)identity;
 
 
 /**
