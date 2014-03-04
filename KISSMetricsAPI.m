@@ -3,6 +3,7 @@
 //  KISSMetricsAPI
 //
 //  Created by Einar Vollset on 9/15/11.
+//  Updated to ARC 3/4/14
 //  Copyright 2011 KISSMetrics. All rights reserved.
 //
 
@@ -77,18 +78,19 @@ static KISSMetricsAPI *sharedAPI = nil;
 #pragma mark -
 #pragma mark Singleton methods
 
-+ (KISSMetricsAPI *) sharedAPIWithKey:(NSString *)apiKey
+
+
++ (KISSMetricsAPI *)sharedAPIWithKey:(NSString *)apiKey
 {
-    @synchronized(self)
-    {
-        if (sharedAPI == nil) {
-            sharedAPI = [[KISSMetricsAPI alloc] init];
-            [sharedAPI initializeAPIWithKey:apiKey];
-        }
-            
-    }
-    return sharedAPI;
+    static KISSMetricsAPI *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[KISSMetricsAPI alloc] init];
+        [sharedAPI initializeAPIWithKey:apiKey];
+    });
+    return sharedInstance;
 }
+
 
 + (KISSMetricsAPI *) sharedAPI
 {
@@ -191,48 +193,6 @@ static KISSMetricsAPI *sharedAPI = nil;
     [self applicationWillEnterForeground:nil];
 }
 
-+ (id)allocWithZone:(NSZone *)zone 
-{
-    @synchronized(self) {
-        if (sharedAPI == nil) 
-        {
-            sharedAPI = [super allocWithZone:zone];
-            return sharedAPI;  // assignment and return on first allocation
-        }
-    }
-    return nil; // on subsequent allocation attempts return nil
-}
-
-- (id)copyWithZone:(NSZone *)zone
-{
-    return self;
-}
-
-- (id)retain {
-    return self;
-}
-
-- (NSUInteger)retainCount {
-    return UINT_MAX;  // denotes an object that cannot be released
-}
-
-- (oneway void)release {
-    //do nothing
-}
-
-- (id)autorelease {
-    return self;
-}
-
-
-- (id)init
-{
-    self = [super init];
-    if (self) {
-    }
-    
-    return self;
-}
 
 
 #pragma mark -
@@ -323,7 +283,6 @@ static KISSMetricsAPI *sharedAPI = nil;
         
         self.existingConnection = [NSURLConnection connectionWithRequest:request delegate:self];
         [self.existingConnection start];
-        [request release];
         
         // If called from a background thread
         if(![NSThread isMainThread]){
@@ -398,10 +357,8 @@ static KISSMetricsAPI *sharedAPI = nil;
         if ([self.sendQueue count] > 1)
         {
             NSString *failedURL = [self.sendQueue objectAtIndex:0];
-            [failedURL retain];
             [self.sendQueue removeObjectAtIndex:0];
             [self.sendQueue addObject:failedURL];
-            [failedURL release];
         }
         [self archiveData];
         
@@ -554,8 +511,8 @@ static KISSMetricsAPI *sharedAPI = nil;
 //the NSString method doesn't work right, so..
 - (NSString *)urlEncode:(NSString *)prior
 {
-    NSString * after = (NSString *)CFURLCreateStringByAddingPercentEscapes( NULL,(CFStringRef)prior, NULL,(CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8 );
-    return [after autorelease];
+    NSString * after = (NSString *)CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes( NULL,(CFStringRef)prior, NULL,(CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8 ));
+    return after;
     
 }
 
@@ -702,7 +659,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     CFUUIDRef theUUID = CFUUIDCreate(NULL);
     CFStringRef string = CFUUIDCreateString(NULL, theUUID);
     CFRelease(theUUID);
-    self.lastIdentity = [(NSString *)string autorelease];
+    self.lastIdentity = (NSString *)CFBridgingRelease(string);
     if (![NSKeyedArchiver archiveRootObject:self.lastIdentity toFile:IDENTITY_PATH])
     {
         InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive identity!!!");
