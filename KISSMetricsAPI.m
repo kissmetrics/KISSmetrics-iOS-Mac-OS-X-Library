@@ -313,7 +313,7 @@ static KISSMetricsAPI *sharedAPI = nil;
         
         nextAPICall = [self.sendQueue objectAtIndex:0];
         
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IOS
         //Networking code.
         [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:YES];
 #endif
@@ -370,7 +370,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error 
 {
     
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IOS
     [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
 #endif
     
@@ -423,7 +423,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     @synchronized(self)
     {
         self.existingConnection = nil;
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IOS
         [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
 #endif
 
