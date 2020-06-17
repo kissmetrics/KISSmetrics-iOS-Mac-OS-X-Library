@@ -17,7 +17,7 @@
 #endif
 
 
-#define BASE_URL @"https://trk.kissmetrics.com"
+#define BASE_URL @"https://trk.kissmetrics.io"
 #define EVENT_PATH @"/e"
 #define PROP_PATH @"/s"
 #define ALIAS_PATH @"/a"
@@ -35,7 +35,7 @@
 static KISSMetricsAPI *sharedAPI = nil;
 
 
-@interface KISSMetricsAPI() 
+@interface KISSMetricsAPI()
 
 @property (nonatomic, retain) NSMutableArray *sendQueue;
 @property (nonatomic, retain) NSTimer *timer;
@@ -85,7 +85,7 @@ static KISSMetricsAPI *sharedAPI = nil;
             sharedAPI = [[KISSMetricsAPI alloc] init];
             [sharedAPI initializeAPIWithKey:apiKey];
         }
-            
+
     }
     return sharedAPI;
 }
@@ -110,91 +110,91 @@ static KISSMetricsAPI *sharedAPI = nil;
     {
         [self clearIdentity];
     }
-    
-    
+
+
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
     //If iOS > 4.0, then we need to listen for the didEnterForeground notification so we can start sending after a suspend.
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000        
-    if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)]) 
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000
+    if ([[UIDevice currentDevice] respondsToSelector:@selector(isMultitaskingSupported)])
     {
         if (&UIApplicationWillEnterForegroundNotification) {
-            [notificationCenter addObserver:self 
-                                   selector:@selector(applicationWillEnterForeground:) 
-                                       name:UIApplicationWillEnterForegroundNotification 
+            [notificationCenter addObserver:self
+                                   selector:@selector(applicationWillEnterForeground:)
+                                       name:UIApplicationWillEnterForegroundNotification
                                      object:nil];
         }
     }
 #endif
     //Always listen to will terminate.
-    
+
 #if !TARGET_OS_IPHONE
-    [notificationCenter addObserver:self 
-                           selector:@selector(applicationWillTerminate:) 
-                               name:NSApplicationWillTerminateNotification 
+    [notificationCenter addObserver:self
+                           selector:@selector(applicationWillTerminate:)
+                               name:NSApplicationWillTerminateNotification
                              object:nil];
 #else
-    [notificationCenter addObserver:self 
-                           selector:@selector(applicationWillTerminate:) 
-                               name:UIApplicationWillTerminateNotification 
+    [notificationCenter addObserver:self
+                           selector:@selector(applicationWillTerminate:)
+                               name:UIApplicationWillTerminateNotification
                              object:nil];
 #endif
-    
-    //Check if we've sent or updated the basic properties for this device. 
+
+    //Check if we've sent or updated the basic properties for this device.
     BOOL shouldSendProps = YES;
     self.propsToSend = [[NSUserDefaults standardUserDefaults] objectForKey:PROPS_KEY];
-    if (self.propsToSend != nil) 
+    if (self.propsToSend != nil)
     {
         shouldSendProps = NO;
-        
+
 #if TARGET_OS_IPHONE
         if(![[[UIDevice currentDevice] systemName] isEqualToString:[self.propsToSend objectForKey:@"systemName"]])
         {
-            shouldSendProps = YES; 
+            shouldSendProps = YES;
         }
         else if(![[[UIDevice currentDevice] systemVersion] isEqualToString:[self.propsToSend objectForKey:@"systemVersion"]])
         {
-            shouldSendProps = YES; 
+            shouldSendProps = YES;
         }
 #else
         if(![MAC_SYSTEM_NAME isEqualToString:[self.propsToSend objectForKey:@"systemName"]])
         {
-            shouldSendProps = YES; 
+            shouldSendProps = YES;
         }
         else if(![[KISSMetricsAPI macVersionNumber] isEqualToString:[self.propsToSend objectForKey:@"systemVersion"]])
         {
-            shouldSendProps = YES; 
+            shouldSendProps = YES;
         }
 #endif
-        
+
     }
-    
+
     if(shouldSendProps)
     {
-        
+
 #if TARGET_OS_IPHONE
         self.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:[[UIDevice currentDevice] systemName], @"systemName", [[UIDevice currentDevice] systemVersion], @"systemVersion", nil];
 #else
         self.propsToSend = [NSDictionary dictionaryWithObjectsAndKeys:MAC_SYSTEM_NAME, @"systemName", [KISSMetricsAPI macVersionNumber], @"systemVersion", nil];
-#endif        
-        
+#endif
+
         [[NSUserDefaults standardUserDefaults] setObject:self.propsToSend forKey:PROPS_KEY];
         [[NSUserDefaults standardUserDefaults] synchronize];
-        
+
     }
     else
     {
-        self.propsToSend = nil; 
+        self.propsToSend = nil;
     }
     //Note: can't send yet, will do so when entering foreground.
-    
-    
+
+
     [self applicationWillEnterForeground:nil];
 }
 
-+ (id)allocWithZone:(NSZone *)zone 
++ (id)allocWithZone:(NSZone *)zone
 {
     @synchronized(self) {
-        if (sharedAPI == nil) 
+        if (sharedAPI == nil)
         {
             sharedAPI = [super allocWithZone:zone];
             return sharedAPI;  // assignment and return on first allocation
@@ -230,7 +230,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     self = [super init];
     if (self) {
     }
-    
+
     return self;
 }
 
@@ -248,13 +248,13 @@ static KISSMetricsAPI *sharedAPI = nil;
             [self.timer invalidate];
             self.timer = nil;
         }
-        
+
         //If existing connection is != nil, cancel it. This will stop any further callbacks.
         if(self.existingConnection != nil)
         {
             [self.existingConnection cancel];
         }
-        
+
         [self archiveData]; //Not 100% sure this is needed, but can't hurt I guess.
     }
 }
@@ -285,8 +285,8 @@ static KISSMetricsAPI *sharedAPI = nil;
 //Actually sends the next API call.
 - (void) send
 {
-    
-    
+
+
     @synchronized(self)
     {
         //If timer is != nil, then we cancel it.
@@ -295,56 +295,56 @@ static KISSMetricsAPI *sharedAPI = nil;
             [self.timer invalidate];
             self.timer = nil;
         }
-        
-        
+
+
         //Ignore this if we have an ongoing connection, as once it completes (successfully or not), it will proceed to the next one.
         if(self.existingConnection != nil)
         {
             return;
         }
-        
+
         NSString *nextAPICall = nil;
-        
+
         //If nothing to do return.
         if([self.sendQueue count] == 0)
         {
             return;
         }
-        
+
         nextAPICall = [self.sendQueue objectAtIndex:0];
-        
+
 #if TARGET_OS_IOS
         //Networking code.
         [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:YES];
 #endif
-        
+
         NSURL *url = [NSURL URLWithString:nextAPICall];
         NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url];
-        
+
         self.existingConnection = [NSURLConnection connectionWithRequest:request delegate:self];
         [self.existingConnection start];
         [request release];
-        
+
         // If called from a background thread
         if(![NSThread isMainThread]){
-            
+
             // Keep the thread alive until the request completes or fails
             while(self.existingConnection) {
                 [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
             }
         }
-        
+
     }
-    
+
 }
 
 #pragma mark -
 #pragma mark NSURLConnection Callbacks
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSHTTPURLResponse *)response 
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSHTTPURLResponse *)response
 {
-    if ([response statusCode] == 200 || [response statusCode] == 304) 
+    if ([response statusCode] == 200 || [response statusCode] == 304)
     {
-        
+
         //Got HTTP 200 or HTTP 304, which means we can remove the top most API call from the queue.
         @synchronized(self)
         {
@@ -352,11 +352,11 @@ static KISSMetricsAPI *sharedAPI = nil;
             [self.sendQueue removeObjectAtIndex:0];
             [self archiveData];
         }
-    } 
-    else 
+    }
+    else
     {
         InfoLog(@"KISSMetricsAPI: INFO - Failure %@", [NSHTTPURLResponse localizedStringForStatusCode:[response statusCode]]);
-        
+
         @synchronized(self)
         {
             self.failureStatus = [response statusCode];
@@ -367,14 +367,14 @@ static KISSMetricsAPI *sharedAPI = nil;
 
 
 
-- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error 
+- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
 {
-    
+
 #if TARGET_OS_IOS
     [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
 #endif
-    
-    
+
+
     if(error.code == NSURLErrorBadURL ||
        error.code == NSURLErrorUnsupportedURL ||
        error.code == NSURLErrorDataLengthExceedsMaximum)
@@ -387,13 +387,13 @@ static KISSMetricsAPI *sharedAPI = nil;
             [self archiveData];
         }
     }
-    
-    
-    
+
+
+
     @synchronized(self)
     {
         self.existingConnection = nil;
-        
+
         //Effectively cycle through the URLs so as to not have one messed up URL block all others.
         if ([self.sendQueue count] > 1)
         {
@@ -404,21 +404,21 @@ static KISSMetricsAPI *sharedAPI = nil;
             [failedURL release];
         }
         [self archiveData];
-        
-        
+
+
         if(self.timer == nil)//Only if there's no other timer do we schedule a retry.
         {
-            self.timer = [NSTimer scheduledTimerWithTimeInterval:RETRY_INTERVAL 
-                                                          target:self 
-                                                        selector:@selector(send) 
-                                                        userInfo:nil 
+            self.timer = [NSTimer scheduledTimerWithTimeInterval:RETRY_INTERVAL
+                                                          target:self
+                                                        selector:@selector(send)
+                                                        userInfo:nil
                                                          repeats:NO];
         }
     }
-    
-    
+
+
 }
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection 
+- (void)connectionDidFinishLoading:(NSURLConnection *)connection
 {
     @synchronized(self)
     {
@@ -438,11 +438,11 @@ static KISSMetricsAPI *sharedAPI = nil;
                                                             userInfo:nil
                                                              repeats:NO];
             }
-            
+
             return;
         }
     }
-    
+
     //Now can try the next one, as this one was successful (might not be one, but that's okay).
     [self send];
 }
@@ -453,20 +453,20 @@ static KISSMetricsAPI *sharedAPI = nil;
 #pragma mark -
 #pragma archival methods
 
-- (void)unarchiveData 
+- (void)unarchiveData
 {
     //Not @synch'ed as should always be called inside @sync bloc
     self.sendQueue = [NSKeyedUnarchiver unarchiveObjectWithFile:FILE_PATH];
-    if (!self.sendQueue) 
+    if (!self.sendQueue)
     {
         self.sendQueue = [NSMutableArray array];
     }
-    
+
 }
-- (void)archiveData 
+- (void)archiveData
 {
     //Not @synch'ed as should always be called inside @sync bloc
-    if (![NSKeyedArchiver archiveRootObject:self.sendQueue toFile:FILE_PATH]) 
+    if (![NSKeyedArchiver archiveRootObject:self.sendQueue toFile:FILE_PATH])
     {
         InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive data!!!");
     }
@@ -481,25 +481,25 @@ static KISSMetricsAPI *sharedAPI = nil;
 - (NSString *)urlizeProps:(NSDictionary *)props
 {
     NSMutableString *propsURLPart = [NSMutableString string];
-    
+
     for(id propKey in [props allKeys])
     {
-        if (![propKey isKindOfClass:[NSString class]]) 
+        if (![propKey isKindOfClass:[NSString class]])
         {
             InfoLog(@"KISSMetricsAPI: WARNING - property keys must be NSString. Dropping property.");
             continue;
         }
         NSString *stringKey = (NSString *)propKey;
-        
-        
+
+
         if([stringKey length] == 0)
         {
             InfoLog(@"KISSMetricsAPI: WARNING - property keys must not be empty strings. Dropping property.");
             continue;
         }
-        
-        
-        
+
+
+
         NSString *stringValue = nil;
         if([props objectForKey:stringKey] == nil)
         {
@@ -515,22 +515,22 @@ static KISSMetricsAPI *sharedAPI = nil;
         {
             stringValue = (NSString *)[props objectForKey:stringKey];
         }
-        
+
         //If it's not NSNumber of NSString, we drop it.
         if(stringValue == nil)
         {
             InfoLog(@"KISSMetricsAPI: WARNING - property value cannot be of type %@. Dropping property.", [[[props objectForKey:stringKey] class] description]);
             continue;
         }
-        
-        
+
+
         if([stringValue length] == 0)
         {
             InfoLog(@"KISSMetricsAPI: WARNING - property values must not be empty strings. Dropping property.");
             continue;
         }
-        
-        
+
+
         //Check for name length after URL encoding.
         NSString *escapedKey = [self urlEncode:stringKey];
         if([escapedKey length] > 255)
@@ -538,15 +538,15 @@ static KISSMetricsAPI *sharedAPI = nil;
             InfoLog(@"KISSMetricsAPI: WARNING - property key cannot longer than 255 characters. When URL escaped, your key is %lu characters long (the submitted value is %@, the URL escaped value is %@). Dropping property.", (unsigned long)[escapedKey length], stringKey, escapedKey);
             continue;
         }
-        
+
         NSString *escapedValue = [self urlEncode:stringValue];
-        
-        
+
+
         //Could check for value & total URL sizes here, but was told not to worry
         [propsURLPart appendFormat:@"&%@=%@", escapedKey, escapedValue];
-        
+
     }
-    
+
     return propsURLPart;
 }
 
@@ -556,7 +556,7 @@ static KISSMetricsAPI *sharedAPI = nil;
 {
     NSString * after = (NSString *)CFURLCreateStringByAddingPercentEscapes( NULL,(CFStringRef)prior, NULL,(CFStringRef)@"!*'();:@&=+$,/?%#[]", kCFStringEncodingUTF8 );
     return [after autorelease];
-    
+
 }
 
 
@@ -567,25 +567,25 @@ static KISSMetricsAPI *sharedAPI = nil;
 //Record event.
 - (void)recordEvent:(NSString *)name withProperties:(NSDictionary *)properties
 {
-    
+
     //Make sure name is good
     if(name == nil || [name length] == 0)
     {
         InfoLog(@"KISSMetricsAPI: WARNING - Tried to record event with empty or nil name. Ignoring.");
         return;
     }
-    
+
     //Must URL escape names.
     NSString *escapedEventName = [self urlEncode:name];
-    
+
     //Need to url escape identity, as could have spaces, etc. lastIdentiy will always be non-nil at this point.
     NSString *escapedIdentity = [self urlEncode:self.lastIdentity];
-    
+
     //We'll store and use the actual time of the record event in case of disconnected operation.
     int actualTimeOfevent = (int)[[NSDate date] timeIntervalSince1970];
-    
+
     NSString *theURL = [NSString stringWithFormat:@"%@%@?_k=%@&_p=%@&_d=1&_t=%i&_n=%@", BASE_URL, EVENT_PATH, self.key, escapedIdentity,actualTimeOfevent,escapedEventName];
-    
+
     if(properties != nil)
     {
         NSString *additionalURL = [self urlizeProps:properties];
@@ -594,8 +594,8 @@ static KISSMetricsAPI *sharedAPI = nil;
             theURL = [NSString stringWithFormat:@"%@%@", theURL,additionalURL];
         }
     }
-    
-    
+
+
     @synchronized(self)
     {
         //Queue up call.
@@ -610,31 +610,31 @@ static KISSMetricsAPI *sharedAPI = nil;
 
 - (void)setProperties:(NSDictionary *)properties
 {
-    
+
     if(properties == nil || [properties count] == 0)
     {
         InfoLog(@"KISSMetricsAPI: WARNING - Tried to set properties with no properties in it..");
         return;
     }
-    
+
     NSString *additionalURL = [self urlizeProps:properties];
     if([additionalURL length] == 0)
     {
         InfoLog(@"KISSMetricsAPI: WARNING - no valid properties in setProperties:. Ignoring call");
         return;
     }
-    
+
     //Need to url escape identity, as could have spaces, etc. lastIdentiy will always be non-nil at this point.
     NSString *escapedIdentity = [self urlEncode:self.lastIdentity];
-    
+
     //We'll store and use the actual time of the record event in case of disconnected operation.
     int actualTimeOfevent = (int)[[NSDate date] timeIntervalSince1970];
-    
+
     NSString *theURL = [NSString stringWithFormat:@"%@%@?_k=%@&_p=%@&_d=1&_t=%i&", BASE_URL, PROP_PATH, self.key, escapedIdentity,actualTimeOfevent];
-    
+
     theURL = [NSString stringWithFormat:@"%@%@", theURL,additionalURL];
-    
-    
+
+
     @synchronized(self)
     {
         //Queue up call.
@@ -650,42 +650,42 @@ static KISSMetricsAPI *sharedAPI = nil;
 
 - (void)identify:(NSString *)identity
 {
-    
+
     if(identity == nil || [identity length] == 0)
     {
         InfoLog(@"KISSMetricsAPI: WARNING - attempted to use nil or empty identity. Ignoring.");
         return;
     }
-  
+
     if ([lastIdentity isEqualToString:identity])
       return;
-  
-    
+
+
     NSString *escapedOldIdentity = [self urlEncode:self.lastIdentity];
     NSString *escapedNewIdentity = [self urlEncode:identity];
-    
-    
+
+
     NSString *theURL = [NSString stringWithFormat:@"%@%@?_k=%@&_p=%@&_n=%@", BASE_URL, ALIAS_PATH, self.key, escapedOldIdentity,escapedNewIdentity];
-    
-    
-    
-    
+
+
+
+
     @synchronized(self)
     {
-        //Now we must update the identity on disk. No need to wait until the alias has been 
+        //Now we must update the identity on disk. No need to wait until the alias has been
         //accepted on the server, as we calls are FIFO and encoded with current identity.
         self.lastIdentity = identity;
-        
-        if (![NSKeyedArchiver archiveRootObject:self.lastIdentity toFile:IDENTITY_PATH]) 
+
+        if (![NSKeyedArchiver archiveRootObject:self.lastIdentity toFile:IDENTITY_PATH])
         {
             InfoLog(@"KISSMetricsAPI: WARNING - Unable to archive new identity!!!");
         }
-        
+
         [self.sendQueue addObject:theURL];
         //Persist the new queue
         [self archiveData];
     }
-    
+
     //Push it out right now if possible.
     [self send];
 }
@@ -717,14 +717,14 @@ static KISSMetricsAPI *sharedAPI = nil;
         InfoLog(@"KISSMetricsAPI: WARNING - attempted to use nil or empty identities in alias (%@ and %@). Ignoring.", firstIdentity, secondIdentity);
         return;
     }
-    
+
     NSString *escapedFirstIdentity = [self urlEncode:firstIdentity];
     NSString *escapedSecondIdentity = [self urlEncode:secondIdentity];
-    
-    
+
+
     NSString *theURL = [NSString stringWithFormat:@"%@%@?_k=%@&_p=%@&_n=%@", BASE_URL, ALIAS_PATH, self.key, escapedFirstIdentity,escapedSecondIdentity];
-    
-    
+
+
     @synchronized(self)
     {
         [self.sendQueue addObject:theURL];
@@ -732,7 +732,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     }
     //Push it out right not if possible.
     [self send];
-    
+
 }
 
 
@@ -747,7 +747,7 @@ static KISSMetricsAPI *sharedAPI = nil;
     if (err != noErr) return nil;
     err =Gestalt(gestaltSystemVersionBugFix, &bugfix);
     if (err != noErr) return nil;
-    
+
     return [NSString stringWithFormat:@"%d.%d.%d", major, minor, bugfix];
 }
 #endif
